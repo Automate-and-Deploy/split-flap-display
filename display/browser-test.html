@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browser Validation Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #000; color: #0f0; }
+    .test { margin: 10px 0; padding: 10px; border: 1px solid #333; }
+    .pass { background: #002200; border-color: #00ff00; }
+    .fail { background: #220000; border-color: #ff0000; }
+    .pending { background: #222200; border-color: #ffff00; }
+    .log { background: #111; padding: 5px; margin: 5px 0; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Enhanced Display - Browser Validation Test</h1>
+  <div id="test-results"></div>
+  
+  <div id="test-output" style="margin-top: 20px;">
+    <h3>Test Output:</h3>
+    <div id="log-area"></div>
+  </div>
+
+  <script>
+    class BrowserValidator {
+      constructor() {
+        this.tests = [];
+        this.socket = null;
+        this.results = document.getElementById('test-results');
+        this.logArea = document.getElementById('log-area');
+        this.testCount = 0;
+        this.passCount = 0;
+      }
+
+      log(message, type = 'info') {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log';
+        logEntry.innerHTML = `[${new Date().toLocaleTimeString()}] ${type.toUpperCase()}: ${message}`;
+        this.logArea.appendChild(logEntry);
+        console.log(`${type.toUpperCase()}: ${message}`);
+      }
+
+      addTest(name, testFn) {
+        this.tests.push({ name, testFn });
+      }
+
+      async runTest(name, testFn) {
+        this.testCount++;
+        const testDiv = document.createElement('div');
+        testDiv.className = 'test pending';
+        testDiv.innerHTML = `<strong>Test ${this.testCount}: ${name}</strong><br>Status: RUNNING...`;
+        this.results.appendChild(testDiv);
+        
+        this.log(`Starting test: ${name}`);
+
+        try {
+          const result = await testFn();
+          if (result) {
+            testDiv.className = 'test pass';
+            testDiv.innerHTML = `<strong>✅ Test ${this.testCount}: ${name}</strong><br>Status: PASSED`;
+            this.passCount++;
+            this.log(`PASSED: ${name}`, 'success');
+          } else {
+            testDiv.className = 'test fail';
+            testDiv.innerHTML = `<strong>❌ Test ${this.testCount}: ${name}</strong><br>Status: FAILED`;
+            this.log(`FAILED: ${name}`, 'error');
+          }
+        } catch (error) {
+          testDiv.className = 'test fail';
+          testDiv.innerHTML = `<strong>❌ Test ${this.testCount}: ${name}</strong><br>Status: ERROR - ${error.message}`;
+          this.log(`ERROR in ${name}: ${error.message}`, 'error');
+        }
+      }
+
+      async runAllTests() {
+        this.log('Starting comprehensive browser validation tests...');
+        
+        for (const test of this.tests) {
+          await this.runTest(test.name, test.testFn);
+          await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause between tests
+        }
+
+        // Summary
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = this.passCount === this.testCount ? 'test pass' : 'test fail';
+        summaryDiv.innerHTML = `
+          <strong>🎯 Test Summary</strong><br>
+          Total: ${this.testCount}<br>
+          Passed: ${this.passCount}<br>
+          Failed: ${this.testCount - this.passCount}<br>
+          Success Rate: ${Math.round((this.passCount / this.testCount) * 100)}%
+        `;
+        this.results.appendChild(summaryDiv);
+
+        this.log(`Test suite completed. ${this.passCount}/${this.testCount} tests passed.`);
+      }
+    }
+
+    // Initialize validator
+    const validator = new BrowserValidator();
+
+    // Test 1: Socket.IO Library Loading
+    validator.addTest('Socket.IO Library Available', async () => {
+      return typeof io !== 'undefined';
+    });
+
+    // Test 2: WebSocket Connection
+    validator.addTest('WebSocket Connection', async () => {
+      return new Promise((resolve) => {
+        try {
+          const socket = io();
+          socket.on('connect', () => {
+            validator.log('WebSocket connected successfully');
+            validator.socket = socket;
+            resolve(true);
+          });
+          socket.on('connect_error', (error) => {
+            validator.log(`WebSocket connection error: ${error.message}`, 'error');
+            resolve(false);
+          });
+          setTimeout(() => resolve(false), 5000); // 5 second timeout
+        } catch (error) {
+          validator.log(`WebSocket initialization error: ${error.message}`, 'error');
+          resolve(false);
+        }
+      });
+    });
+
+    // Test 3: Display Registration
+    validator.addTest('Display Registration', async () => {
+      if (!validator.socket) return false;
+      
+      return new Promise((resolve) => {
+        validator.socket.emit('register_display', {
+          display_id: 'browser-test',
+          capabilities: { test: true }
+        });
+        
+        validator.socket.on('config_updated', () => {
+          validator.log('Display registration successful - config received');
+          resolve(true);
+        });
+        
+        setTimeout(() => resolve(false), 3000);
+      });
+    });
+
+    // Test 4: API Connectivity
+    validator.addTest('REST API Connectivity', async () => {
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        return data.status === 'healthy';
+      } catch (error) {
+        validator.log(`API connectivity error: ${error.message}`, 'error');
+        return false;
+      }
+    });
+
+    // Test 5: Enhanced JavaScript Modules
+    validator.addTest('Enhanced JavaScript Modules', async () => {
+      try {
+        // Test if our enhanced modules can be loaded
+        const response1 = await fetch('/js/enhanced/WebSocketClient.js');
+        const response2 = await fetch('/js/enhanced/ConfigManager.js');
+        const response3 = await fetch('/js/enhanced/EnhancedMain.js');
+        
+        return response1.ok && response2.ok && response3.ok;
+      } catch (error) {
+        return false;
+      }
+    });
+
+    // Test 6: CSS and Visual Assets
+    validator.addTest('CSS and Visual Assets', async () => {
+      try {
+        const response1 = await fetch('/css/board.css');
+        const response2 = await fetch('/css/tile.css');
+        
+        return response1.ok && response2.ok;
+      } catch (error) {
+        return false;
+      }
+    });
+
+    // Test 7: Create Message via API
+    validator.addTest('Create Message via API', async () => {
+      try {
+        const response = await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'Browser Test Message',
+            content: ['', 'BROWSER', 'VALIDATION', 'SUCCESS', ''],
+            display_id: 'browser-test'
+          })
+        });
+        
+        const data = await response.json();
+        validator.log(`Created message with ID: ${data.id}`);
+        return data.id > 0;
+      } catch (error) {
+        return false;
+      }
+    });
+
+    // Test 8: WebSocket Message Reception
+    validator.addTest('WebSocket Message Reception', async () => {
+      if (!validator.socket) return false;
+      
+      return new Promise((resolve) => {
+        validator.socket.on('message_created', (message) => {
+          validator.log(`WebSocket message received: ${message.title}`);
+          resolve(true);
+        });
+        
+        setTimeout(() => resolve(false), 3000);
+      });
+    });
+
+    // Test 9: DOM Manipulation Capability
+    validator.addTest('DOM Manipulation Capability', async () => {
+      try {
+        // Test basic DOM operations that the display would need
+        const testDiv = document.createElement('div');
+        testDiv.style.transform = 'rotateX(90deg)';
+        testDiv.style.transition = 'all 0.3s ease';
+        document.body.appendChild(testDiv);
+        document.body.removeChild(testDiv);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    });
+
+    // Test 10: Local Storage
+    validator.addTest('Local Storage Functionality', async () => {
+      try {
+        localStorage.setItem('test-key', 'test-value');
+        const value = localStorage.getItem('test-key');
+        localStorage.removeItem('test-key');
+        return value === 'test-value';
+      } catch (error) {
+        return false;
+      }
+    });
+
+    // Load Socket.IO and run tests
+    const script = document.createElement('script');
+    script.src = '/socket.io/socket.io.js';
+    script.onload = () => {
+      validator.log('Socket.IO library loaded');
+      validator.runAllTests();
+    };
+    script.onerror = () => {
+      validator.log('Failed to load Socket.IO library', 'error');
+      validator.runAllTests(); // Run tests anyway to see what fails
+    };
+    document.head.appendChild(script);
+  </script>
+</body>
+</html>

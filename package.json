@@ -1,0 +1,37 @@
+{
+  "name": "split-flap-display",
+  "version": "1.0.0",
+  "description": "Retro airport-style split-flap display for TVs with backend control",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "cd server && npm start",
+    "install-deps": "cd server && npm install",
+    "test": "node -e \"console.log('Run ./test-suite.sh on Linux/Mac or \\\".\\\\test-windows.ps1\\\" on Windows')\"",
+    "dev": "cd server && npm run dev",
+    "clean": "node -e \"const fs=require('fs'),path=require('path'); const db=path.join('server','db','display.db'); if(fs.existsSync(db))fs.unlinkSync(db); console.log('Cleaned up database files')\"",
+    "deploy": "echo 'Use git commands directly to push'",
+    "start:win": "start-windows.bat",
+    "test:win": "powershell -ExecutionPolicy Bypass -File test-windows.ps1"
+  },
+  "keywords": [
+    "split-flap",
+    "flip-board",
+    "airport",
+    "retro",
+    "signage",
+    "tv",
+    "digital-signage",
+    "websocket",
+    "nodejs",
+    "express"
+  ],
+  "author": "automate-and-deploy",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "directories": {
+    "server": "./server",
+    "frontend": "./display"
+  }
+}

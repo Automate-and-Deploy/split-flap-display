@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111111">
+  <title>Enhanced Display</title>
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/board.css">
+  <link rel="stylesheet" href="css/tile.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  
+  <style>
+    :root {
+      --bg-color: #000000;
+      --text-color: #ffffff;
+      --accent-color: #ff6600;
+    }
+
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+    }
+
+    /* Connection status indicator */
+    .connection-status {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+
+    .connection-status.connecting { background: #ffa500; color: white; }
+    .connection-status.connected { background: #4caf50; color: white; }
+    .connection-status.disconnected { background: #f44336; color: white; }
+    .connection-status.error { background: #e91e63; color: white; }
+    
+    /* Hide text status, we use dots now */
+    #connection-status {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="connection-status" class="connection-status connecting">Connecting...</div>
+  <div id="board-container"></div>
+  
+  <!-- Socket.IO -->
+  <script src="/socket.io/socket.io.js"></script>
+  
+  <script type="module">
+    import { Board } from './js/Board.js';
+    import { SoundEngine } from './js/SoundEngine.js';
+    import { MESSAGES } from './js/constants.js';
+    import { WebSocketClient } from './js/enhanced/WebSocketClient.js';
+
+    // Initialize components
+    const boardContainer = document.getElementById('board-container');
+    const soundEngine = new SoundEngine();
+    const board = new Board(boardContainer, soundEngine);
+    
+    // Get display ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const displayId = urlParams.get('display') || 'default';
+    
+    // Set up WebSocket
+    const wsClient = new WebSocketClient(displayId);
+    
+    // Track message rotation
+    let messages = [...MESSAGES];
+    let currentMessageIndex = 0;
+    let messageInterval = null;
+    
+    function showNextMessage() {
+      if (messages.length === 0) return;
+      const message = messages[currentMessageIndex];
+      board.displayMessage(message);
+      currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+    }
+    
+    function startRotation() {
+      if (messageInterval) clearInterval(messageInterval);
+      messageInterval = setInterval(showNextMessage, 6000);
+      showNextMessage();
+    }
+    
+    function stopRotation() {
+      if (messageInterval) {
+        clearInterval(messageInterval);
+        messageInterval = null;
+      }
+    }
+    
+    // WebSocket event handlers
+    wsClient.on('connected', () => {
+      console.log('✅ Connected to server');
+      document.getElementById('connection-status').className = 'connection-status connected';
+      document.getElementById('connection-status').textContent = 'Connected';
+      board.setConnectionStatus('connected');
+    });
+    
+    wsClient.on('disconnected', () => {
+      console.log('❌ Disconnected from server');
+      document.getElementById('connection-status').className = 'connection-status disconnected';
+      document.getElementById('connection-status').textContent = 'Offline';
+      board.setConnectionStatus('disconnected');
+      // Fall back to local messages
+      messages = [...MESSAGES];
+      startRotation();
+    });
+    
+    wsClient.on('connect_error', () => {
+      board.setConnectionStatus('error');
+    });
+    
+    wsClient.on('config_updated', (config) => {
+      if (config.grid_cols && config.grid_rows) {
+        board.updateGridSize(parseInt(config.grid_cols), parseInt(config.grid_rows));
+      }
+    });
+
+    wsClient.on('appearance_updated', (appearance) => {
+      if (appearance.colorTheme) {
+        board.applyColorTheme(appearance.colorTheme, appearance.customColor);
+      }
+      if (appearance.tileStyle) {
+        board.applyTileStyle(appearance.tileStyle);
+      }
+      // Persist so it survives page reload
+      try { localStorage.setItem('display_appearance', JSON.stringify(appearance)); } catch(e) {}
+    });
+
+    // Restore last appearance from localStorage on load
+    try {
+      const saved = localStorage.getItem('display_appearance');
+      if (saved) {
+        const appearance = JSON.parse(saved);
+        if (appearance.colorTheme) board.applyColorTheme(appearance.colorTheme, appearance.customColor);
+        if (appearance.tileStyle) board.applyTileStyle(appearance.tileStyle);
+      }
+    } catch(e) {}
+    
+    wsClient.on('messages_loaded', (serverMessages) => {
+      console.log('📨 Messages loaded:', serverMessages.length);
+      if (serverMessages.length > 0) {
+        messages = serverMessages.map(m => m.content);
+        currentMessageIndex = 0;
+        startRotation();
+      }
+    });
+    
+    wsClient.on('show_message', (message) => {
+      console.log('📺 Show message:', message);
+      if (message.content) {
+        stopRotation();
+        board.displayMessage(message.content);
+      }
+    });
+    
+    wsClient.on('reload', () => {
+      window.location.reload();
+    });
+    
+    // Connect to server
+    wsClient.connect();
+    
+    // Start with local messages until server connects
+    startRotation();
+    
+    // Audio init on first interaction
+    let audioInitialized = false;
+    const initAudio = async () => {
+      if (audioInitialized) return;
+      audioInitialized = true;
+      await soundEngine.init();
+      soundEngine.resume();
+    };
+    document.addEventListener('click', initAudio);
+    document.addEventListener('keydown', initAudio);
+    
+    // Fullscreen on 'F' key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'f' || e.key === 'F') {
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          document.documentElement.requestFullscreen();
+        }
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        soundEngine.toggleMute();
+      }
+    });
+  </script>
+</body>
+</html>

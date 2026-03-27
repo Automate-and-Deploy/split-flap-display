@@ -1,0 +1,86 @@
+/* Large screens / 4K TVs */
+@media (min-width: 2000px) {
+  .board {
+    --tile-size: min(5vw, 9vh);
+    --tile-gap: 5px;
+    padding: 36px 48px 48px;
+    border-radius: 20px;
+  }
+
+  .accent-segment {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Standard desktop */
+@media (max-width: 1400px) {
+  .board {
+    --tile-size: min(5.8vw, 7.5vh);
+  }
+}
+
+/* Tablet and smaller desktop */
+@media (max-width: 1000px) {
+  .board {
+    --tile-size: min(6vw, 7vh);
+    padding: 22px 28px 30px;
+  }
+
+  .accent-bar {
+    top: 20px;
+  }
+
+  .accent-segment {
+    width: 11px;
+    height: 11px;
+  }
+}
+
+/* Mobile / Portrait mode - vertical layout */
+@media (max-aspect-ratio: 3/4), (max-width: 700px) {
+  #board-container {
+    padding: 12px;
+  }
+
+  .board {
+    --tile-size: min(16vw, 10vh);
+    --tile-gap: 3px;
+    padding: 20px 24px 28px;
+    border-radius: 12px;
+    width: fit-content;
+  }
+
+  /* Tiles flow vertically in portrait */
+  .tile-grid {
+    grid-template-columns: repeat(var(--grid-rows, 5), var(--tile-size));
+    grid-template-rows: repeat(var(--grid-cols, 22), var(--tile-size));
+  }
+
+  .accent-bar {
+    display: none;
+  }
+
+  .keyboard-hint {
+    display: none;
+  }
+
+  .board::after {
+    width: 32px;
+    height: 3px;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 400px) {
+  .board {
+    --tile-size: min(17vw, 9vh);
+    --tile-gap: 2px;
+    padding: 16px 16px 22px;
+    border-radius: 10px;
+  }
+
+  #board-container {
+    padding: 8px;
+  }
+}

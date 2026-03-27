@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111111">
+  <title>Enhanced Display</title>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/board.css">
+  <link rel="stylesheet" href="css/tile.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  
+  <!-- Custom CSS for enhanced features -->
+  <style>
+    :root {
+      --bg-color: #000000;
+      --text-color: #ffffff;
+      --accent-color: #ff6600;
+      --tile-size: 60px;
+      --font-size: 36px;
+      --grid-cols: 22;
+      --grid-rows: 5;
+    }
+
+    /* Enhanced header with connection status */
+    .header {
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .header-logo {
+      font-weight: bold;
+      font-size: 1.5rem;
+      color: var(--accent-color);
+    }
+
+    .display-info {
+      font-size: 0.9rem;
+      color: #888;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    /* Connection status indicator */
+    .connection-status {
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+    }
+
+    .connection-status.connecting {
+      background: #ffa500;
+      color: white;
+    }
+
+    .connection-status.connected {
+      background: #4caf50;
+      color: white;
+    }
+
+    .connection-status.disconnected {
+      background: #f44336;
+      color: white;
+    }
+
+    .connection-status.error {
+      background: #e91e63;
+      color: white;
+    }
+
+    /* Enhanced board styling */
+    .board-section {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: 2rem;
+      background: var(--bg-color);
+    }
+
+    /* Fullscreen mode optimizations */
+    .fullscreen .header {
+      display: none;
+    }
+
+    .fullscreen .hero {
+      display: none;
+    }
+
+    .fullscreen .board-section {
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* Admin controls (hidden by default) */
+    .admin-controls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 200;
+      display: none;
+      gap: 10px;
+    }
+
+    .admin-controls button {
+      padding: 10px 15px;
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .admin-controls button:hover {
+      background: #cc5200;
+    }
+
+    /* Show admin controls on Ctrl+Shift+A */
+    body.show-admin .admin-controls {
+      display: flex;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.5s ease;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top: 4px solid var(--accent-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Error message */
+    .error-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #f44336;
+      color: white;
+      padding: 2rem;
+      border-radius: 10px;
+      text-align: center;
+      z-index: 1001;
+      max-width: 400px;
+      display: none;
+    }
+
+    .error-message.visible {
+      display: block;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .header-left {
+        gap: 1rem;
+      }
+      
+      .display-info {
+        display: none;
+      }
+      
+      .header-right {
+        gap: 0.5rem;
+      }
+    }
+
+    /* TV mode optimizations */
+    @media (min-width: 1920px) {
+      .board-section {
+        padding: 4rem;
+      }
+    }
+
+    @media (max-height: 600px) {
+      .header {
+        padding: 0.5rem 2rem;
+      }
+      
+      .board-section {
+        min-height: 50vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p style="color: white; margin-top: 1rem;">Initializing Enhanced Display...</p>
+    </div>
+  </div>
+
+  <!-- Error message -->
+  <div class="error-message" id="error-message">
+    <h3>Connection Error</h3>
+    <p id="error-text">Unable to connect to the server. Please check your connection and try again.</p>
+    <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: white; color: #f44336; border: none; border-radius: 5px; cursor: pointer;">Retry</button>
+  </div>
+
+  <div class="page-frame">
+    <!-- Enhanced Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="header-logo">Enhanced Display</div>
+        <div class="display-info" id="display-info">
+          <span id="display-id">Display: default</span>
+          <span id="grid-info">22×5 Grid</span>
+        </div>
+      </div>
+      
+      <div class="header-right">
+        <div class="connection-status connecting" id="connection-status">Connecting</div>
+        <button class="volume-icon" id="volume-btn" title="Toggle sound">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+        </button>
+        <button id="fullscreen-btn" title="Enter fullscreen (F)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Board Display -->
+    <section class="board-section" id="board-container">
+      <!-- Board will be dynamically created here -->
+    </section>
+
+    <!-- Admin Controls (hidden by default, shown with Ctrl+Shift+A) -->
+    <div class="admin-controls" id="admin-controls">
+      <button id="config-btn" title="Configuration">⚙️ Config</button>
+      <button id="admin-btn" title="Open Admin Panel">🔧 Admin</button>
+      <button id="test-btn" title="Send Test Message">🧪 Test</button>
+      <button id="reload-btn" title="Reload Display">🔄 Reload</button>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <!-- Socket.IO Library -->
+  <script src="/socket.io/socket.io.js"></script>
+  
+  <script type="module">
+    // Import enhanced main application
+    import './js/enhanced/EnhancedMain.js';
+
+    // Additional initialization
+    document.addEventListener('DOMContentLoaded', () => {
+      // Update display info in header
+      const urlParams = new URLSearchParams(window.location.search);
+      const displayId = urlParams.get('display') || localStorage.getItem('display_id') || 'default';
+      
+      document.getElementById('display-id').textContent = `Display: ${displayId}`;
+
+      // Hide loading overlay after a short delay
+      setTimeout(() => {
+        const overlay = document.getElementById('loading-overlay');
+        overlay.classList.add('hidden');
+        setTimeout(() => overlay.remove(), 500);
+      }, 2000);
+
+      // Admin controls toggle (Ctrl+Shift+A)
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+          document.body.classList.toggle('show-admin');
+        }
+      });
+
+      // Fullscreen button
+      document.getElementById('fullscreen-btn').addEventListener('click', () => {
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          document.documentElement.requestFullscreen();
+        }
+      });
+
+      // Admin control buttons
+      document.getElementById('config-btn').addEventListener('click', () => {
+        // Show configuration dialog or redirect to admin
+        if (window.enhancedDisplay) {
+          const config = window.enhancedDisplay.getCurrentConfig();
+          alert('Configuration:\\n' + JSON.stringify(config, null, 2));
+        }
+      });
+
+      document.getElementById('admin-btn').addEventListener('click', () => {
+        window.open('/admin', '_blank');
+      });
+
+      document.getElementById('test-btn').addEventListener('click', () => {
+        // Send a test message
+        if (window.wsClient) {
+          const testMessage = {
+            id: 'test_' + Date.now(),
+            content: ['', 'TEST MESSAGE', 'FROM ADMIN', new Date().toLocaleTimeString(), ''],
+            title: 'Admin Test Message'
+          };
+          window.enhancedDisplay.showMessage(testMessage);
+        }
+      });
+
+      document.getElementById('reload-btn').addEventListener('click', () => {
+        location.reload();
+      });
+
+      // Update grid info when configuration changes
+      if (window.configManager) {
+        window.configManager.addListener((config) => {
+          document.getElementById('grid-info').textContent = `${config.grid_cols}×${config.grid_rows} Grid`;
+        });
+      }
+
+      // Error handling
+      window.addEventListener('error', (event) => {
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        errorText.textContent = `JavaScript Error: ${event.error.message}`;
+        errorMessage.classList.add('visible');
+        
+        // Hide after 5 seconds
+        setTimeout(() => {
+          errorMessage.classList.remove('visible');
+        }, 5000);
+      });
+
+      // Connection status updates
+      if (window.wsClient) {
+        window.wsClient.on('connected', () => {
+          document.getElementById('error-message').classList.remove('visible');
+        });
+        
+        window.wsClient.on('disconnected', () => {
+          // Show error message after 10 seconds of disconnection
+          setTimeout(() => {
+            if (!window.wsClient.isConnected) {
+              const errorMessage = document.getElementById('error-message');
+              const errorText = document.getElementById('error-text');
+              errorText.textContent = 'Lost connection to server. Retrying...';
+              errorMessage.classList.add('visible');
+            }
+          }, 10000);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
